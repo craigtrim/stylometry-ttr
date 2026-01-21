@@ -15,7 +15,7 @@ Usage:
     tokens = ttr.tokenize(text)
 """
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 from typing import Optional
 
@@ -29,6 +29,8 @@ def compute_ttr(
     text_id: str,
     title: str = "",
     author: str = "",
+    chunk_size: int = 1000,
+    return_chunks: bool = False,
     config: Optional[TTRConfig] = None,
 ) -> TTRResult:
     """
@@ -41,13 +43,23 @@ def compute_ttr(
         text_id: Unique identifier for the text
         title: Title of the text (optional)
         author: Author identifier (optional)
-        config: TTR configuration (optional, uses defaults if not provided)
+        chunk_size: Words per chunk for STTR (default: 1000)
+        return_chunks: Return per-chunk TTR data for visualization (default: False)
+        config: TTR configuration (optional, overrides chunk_size/return_chunks if provided)
 
     Returns:
         TTRResult with all computed metrics
     """
     tokenizer = Tokenizer()
     tokens = tokenizer.tokenize(text)
+
+    # Use provided config, or build one from convenience parameters
+    if config is None:
+        config = TTRConfig(
+            sttr_chunk_size=chunk_size,
+            return_chunk_details=return_chunks,
+        )
+
     calculator = TTRCalculator(config=config)
     return calculator.compute(tokens, text_id=text_id, title=title, author=author)
 

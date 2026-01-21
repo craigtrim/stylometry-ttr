@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "stylometry-ttr"
-version = "1.0.1"
+version = "1.0.2"
 description = "Type-Token Ratio (TTR) computation for stylometric analysis"
 authors = ["Craig Trim <ctrim@maryville.edu>"]
 readme = "README.md"

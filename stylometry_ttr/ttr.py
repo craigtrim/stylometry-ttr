@@ -15,7 +15,7 @@ import statistics
 from dataclasses import dataclass
 from typing import Optional
 
-from stylometry_ttr.models import TTRResult, TTRAggregate
+from stylometry_ttr.models import TTRResult, TTRAggregate, ChunkTTR
 
 
 @dataclass
@@ -24,6 +24,7 @@ class TTRConfig:
 
     sttr_chunk_size: int = 1000  # Words per chunk for STTR
     min_words_for_sttr: int = 2000  # Minimum words to compute STTR
+    return_chunk_details: bool = False  # Return per-chunk TTR data
 
 
 class TTRCalculator:
@@ -80,6 +81,7 @@ class TTRCalculator:
                 delta_std=None,
                 delta_min=None,
                 delta_max=None,
+                chunk_ttrs=None,
             )
 
         # Count unique words
@@ -95,7 +97,7 @@ class TTRCalculator:
         log_ttr = math.log(unique_words) / math.log(total_words) if total_words > 1 else 0.0
 
         # Standardized TTR and deltas (computed on fixed-size chunks)
-        sttr, sttr_std, chunk_count, delta_mean, delta_std, delta_min, delta_max = (
+        sttr, sttr_std, chunk_count, delta_mean, delta_std, delta_min, delta_max, chunk_details = (
             self._compute_sttr(tokens)
         )
 
@@ -115,6 +117,7 @@ class TTRCalculator:
             delta_std=round(delta_std, 6) if delta_std is not None else None,
             delta_min=round(delta_min, 6) if delta_min is not None else None,
             delta_max=round(delta_max, 6) if delta_max is not None else None,
+            chunk_ttrs=chunk_details,
         )
 
     def _compute_sttr(
@@ -127,6 +130,7 @@ class TTRCalculator:
         Optional[float],
         Optional[float],
         Optional[float],
+        Optional[list[ChunkTTR]],
     ]:
         """
         Compute Standardized TTR and delta metrics using fixed-size chunks.
@@ -140,14 +144,15 @@ class TTRCalculator:
             tokens: List of tokens
 
         Returns:
-            Tuple of (mean_sttr, std_sttr, chunk_count, delta_mean, delta_std, delta_min, delta_max)
+            Tuple of (mean_sttr, std_sttr, chunk_count, delta_mean, delta_std,
+                      delta_min, delta_max, chunk_details)
         """
         total_words = len(tokens)
         chunk_size = self._config.sttr_chunk_size
 
         # Need minimum words
         if total_words < self._config.min_words_for_sttr:
-            return None, None, None, None, None, None, None
+            return None, None, None, None, None, None, None, None
 
         # Compute TTR for each chunk
         chunk_ttrs: list[float] = []
@@ -159,14 +164,22 @@ class TTRCalculator:
             chunk_ttrs.append(chunk_ttr)
 
         if not chunk_ttrs:
-            return None, None, None, None, None, None, None
+            return None, None, None, None, None, None, None, None
 
         mean_sttr = statistics.mean(chunk_ttrs)
         std_sttr = statistics.stdev(chunk_ttrs) if len(chunk_ttrs) > 1 else 0.0
 
+        # Build chunk details if requested
+        chunk_details: Optional[list[ChunkTTR]] = None
+        if self._config.return_chunk_details:
+            chunk_details = [
+                ChunkTTR(chunk_number=i + 1, ttr=round(ttr, 6))
+                for i, ttr in enumerate(chunk_ttrs)
+            ]
+
         # Compute deltas: TTR(n) - TTR(n-1)
         if len(chunk_ttrs) < 2:
-            return mean_sttr, std_sttr, len(chunk_ttrs), None, None, None, None
+            return mean_sttr, std_sttr, len(chunk_ttrs), None, None, None, None, chunk_details
 
         deltas = [chunk_ttrs[i] - chunk_ttrs[i - 1] for i in range(1, len(chunk_ttrs))]
         delta_mean = statistics.mean(deltas)
@@ -174,7 +187,7 @@ class TTRCalculator:
         delta_min = min(deltas)
         delta_max = max(deltas)
 
-        return mean_sttr, std_sttr, len(chunk_ttrs), delta_mean, delta_std, delta_min, delta_max
+        return mean_sttr, std_sttr, len(chunk_ttrs), delta_mean, delta_std, delta_min, delta_max, chunk_details
 
 
 class TTRAggregator:

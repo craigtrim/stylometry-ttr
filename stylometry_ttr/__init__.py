@@ -15,11 +15,11 @@ Usage:
     tokens = ttr.tokenize(text)
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 from typing import Optional
 
-from stylometry_ttr.models import TTRResult, TTRAggregate
+from stylometry_ttr.models import TTRResult, TTRAggregate, ChunkTTR
 from stylometry_ttr.ttr import TTRCalculator, TTRConfig, TTRAggregator
 from stylometry_ttr.tokenizer import Tokenizer, tokenize, tokenize_iter
 
@@ -65,6 +65,7 @@ __all__ = [
     # Models
     "TTRResult",
     "TTRAggregate",
+    "ChunkTTR",
     # Power user classes
     "TTRCalculator",
     "TTRConfig",

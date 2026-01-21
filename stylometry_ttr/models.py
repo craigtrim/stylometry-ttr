@@ -10,6 +10,15 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class ChunkTTR(BaseModel):
+    """TTR data for a single chunk."""
+
+    model_config = ConfigDict(frozen=True)
+
+    chunk_number: int = Field(..., ge=1, description="1-indexed chunk number")
+    ttr: float = Field(..., ge=0.0, le=1.0, description="TTR for this chunk")
+
+
 class TTRResult(BaseModel):
     """Type-Token Ratio results for a single text."""
 
@@ -34,6 +43,11 @@ class TTRResult(BaseModel):
     delta_std: Optional[float] = Field(None, ge=0.0, description="Std dev of TTR deltas (volatility)")
     delta_min: Optional[float] = Field(None, description="Largest negative swing")
     delta_max: Optional[float] = Field(None, description="Largest positive swing")
+
+    # Per-chunk TTR data (opt-in via TTRConfig.return_chunk_details)
+    chunk_ttrs: Optional[list[ChunkTTR]] = Field(
+        None, description="Per-chunk TTR values (1-indexed)"
+    )
 
     def to_json(self, indent: int = 2, exclude_none: bool = True) -> str:
         """Return JSON string representation."""
